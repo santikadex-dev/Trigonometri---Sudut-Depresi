@@ -1,0 +1,251 @@
+{
+  "entities": {
+    "Submission": {
+      "title": "Submission",
+      "description": "Student digital worksheet submission for Misi Detektif Trigonometri",
+      "type": "object",
+      "properties": {
+        "studentUid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID of the student"
+        },
+        "studentEmail": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Verified email of the student"
+        },
+        "studentName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120,
+          "description": "Full name of the student"
+        },
+        "studentClass": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40,
+          "description": "Class identifier e.g. X-A"
+        },
+        "studentNumber": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20,
+          "description": "Attendance number or group code"
+        },
+        "simAngleDeg": {
+          "type": "number",
+          "description": "Angle of depression set in the simulator (degrees)"
+        },
+        "simHeightM": {
+          "type": "number",
+          "description": "Observer height set in the simulator (meters)"
+        },
+        "simCalculatedDist": {
+          "type": "number",
+          "description": "Horizontal distance calculated in simulator (meters)"
+        },
+        "qConcept1": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "True/False answer for concept check 1"
+        },
+        "qConcept1Reason": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Student explanation for concept check 1"
+        },
+        "qConcept2": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "True/False answer for concept check 2"
+        },
+        "qCase1Height": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Case 1 identified height"
+        },
+        "qCase1Angle": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Case 1 identified angle"
+        },
+        "qCase1Distance": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Case 1 calculated horizontal distance"
+        },
+        "qCase1Steps": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Case 1 written steps"
+        },
+        "qCase2DistA": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Case 2 horizontal distance to car A"
+        },
+        "qCase2DistB": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Case 2 horizontal distance to car B"
+        },
+        "qCase2Gap": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Case 2 distance between car A and car B"
+        },
+        "qCase2Steps": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Case 2 written reasoning and steps"
+        },
+        "qCase3Answer": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Case 3 calculated speed or distance"
+        },
+        "qCase3Strategy": {
+          "type": "string",
+          "maxLength": 2500,
+          "description": "Case 3 STEM problem-solving strategy"
+        },
+        "qHots1Options": {
+          "type": "array",
+          "description": "Selected options for HOTS complex multiple choice"
+        },
+        "qHots2Decision": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "AKM safety decision"
+        },
+        "qHots2Reasoning": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "AKM data-based justification"
+        },
+        "reflectionText": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Student learning reflection"
+        },
+        "confidenceLevel": {
+          "type": "number",
+          "description": "Student self-confidence rating 1-5"
+        },
+        "autoScore": {
+          "type": "number",
+          "description": "Automated objective score"
+        },
+        "autoMaxScore": {
+          "type": "number",
+          "description": "Maximum automated objective score"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["submitted", "graded"],
+          "maxLength": 20,
+          "description": "Grading workflow status"
+        },
+        "teacherScore": {
+          "type": "number",
+          "description": "Final score assigned by teacher (0-100)"
+        },
+        "teacherFeedback": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Feedback notes from teacher"
+        },
+        "gradedBy": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "UID or email of grading teacher"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of creation"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last update"
+        }
+      },
+      "required": [
+        "studentUid",
+        "studentEmail",
+        "studentName",
+        "studentClass",
+        "studentNumber",
+        "simAngleDeg",
+        "simHeightM",
+        "simCalculatedDist",
+        "qConcept1",
+        "qConcept1Reason",
+        "qConcept2",
+        "qCase1Height",
+        "qCase1Angle",
+        "qCase1Distance",
+        "qCase1Steps",
+        "qCase2DistA",
+        "qCase2DistB",
+        "qCase2Gap",
+        "qCase2Steps",
+        "qCase3Answer",
+        "qCase3Strategy",
+        "qHots1Options",
+        "qHots2Decision",
+        "qHots2Reasoning",
+        "reflectionText",
+        "confidenceLevel",
+        "autoScore",
+        "autoMaxScore",
+        "status",
+        "teacherScore",
+        "teacherFeedback",
+        "gradedBy",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Teacher": {
+      "title": "Teacher",
+      "description": "Authorized teacher account whitelist",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Teacher email"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "Teacher display name"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp"
+        }
+      },
+      "required": ["email", "name", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/submissions/{submissionId}": {
+      "schema": {
+        "$ref": "#/entities/Submission"
+      },
+      "description": "Student worksheet submissions and teacher grading feedback"
+    },
+    "/teachers/{teacherId}": {
+      "schema": {
+        "$ref": "#/entities/Teacher"
+      },
+      "description": "Whitelisted teacher accounts allowed to review and grade student submissions"
+    }
+  }
+}

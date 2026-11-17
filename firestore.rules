@@ -1,0 +1,167 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net: deny everything unless explicitly matched
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Core helper primitives
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isAdminEmail() {
+      return isVerifiedUser() && request.auth.token.email == 'santika.dex@gmail.com';
+    }
+
+    function isTeacher() {
+      return isAdminEmail() || (isVerifiedUser() && exists(/databases/$(database)/documents/teachers/$(request.auth.uid)));
+    }
+
+    function isValidSubmission(data) {
+      return data.keys().hasAll([
+        'studentUid', 'studentEmail', 'studentName', 'studentClass', 'studentNumber',
+        'simAngleDeg', 'simHeightM', 'simCalculatedDist',
+        'qConcept1', 'qConcept1Reason', 'qConcept2',
+        'qCase1Height', 'qCase1Angle', 'qCase1Distance', 'qCase1Steps',
+        'qCase2DistA', 'qCase2DistB', 'qCase2Gap', 'qCase2Steps',
+        'qCase3Answer', 'qCase3Strategy',
+        'qHots1Options', 'qHots2Decision', 'qHots2Reasoning',
+        'reflectionText', 'confidenceLevel',
+        'autoScore', 'autoMaxScore',
+        'status', 'teacherScore', 'teacherFeedback', 'gradedBy',
+        'createdAt', 'updatedAt'
+      ])
+      && data.keys().hasOnly([
+        'studentUid', 'studentEmail', 'studentName', 'studentClass', 'studentNumber',
+        'simAngleDeg', 'simHeightM', 'simCalculatedDist',
+        'qConcept1', 'qConcept1Reason', 'qConcept2',
+        'qCase1Height', 'qCase1Angle', 'qCase1Distance', 'qCase1Steps',
+        'qCase2DistA', 'qCase2DistB', 'qCase2Gap', 'qCase2Steps',
+        'qCase3Answer', 'qCase3Strategy',
+        'qHots1Options', 'qHots2Decision', 'qHots2Reasoning',
+        'reflectionText', 'confidenceLevel',
+        'autoScore', 'autoMaxScore',
+        'status', 'teacherScore', 'teacherFeedback', 'gradedBy',
+        'createdAt', 'updatedAt'
+      ])
+      && data.studentUid is string && data.studentUid.size() <= 128 && data.studentUid.matches('^[a-zA-Z0-9_\\-]+$')
+      && data.studentEmail is string && data.studentEmail.size() <= 200
+      && data.studentName is string && data.studentName.size() >= 2 && data.studentName.size() <= 120
+      && data.studentClass is string && data.studentClass.size() >= 1 && data.studentClass.size() <= 40
+      && data.studentNumber is string && data.studentNumber.size() >= 1 && data.studentNumber.size() <= 20
+      && data.simAngleDeg is number && data.simAngleDeg >= 5 && data.simAngleDeg <= 85
+      && data.simHeightM is number && data.simHeightM >= 1 && data.simHeightM <= 500
+      && data.simCalculatedDist is number && data.simCalculatedDist >= 0 && data.simCalculatedDist <= 10000
+      && data.qConcept1 is string && data.qConcept1.size() <= 20
+      && data.qConcept1Reason is string && data.qConcept1Reason.size() <= 1000
+      && data.qConcept2 is string && data.qConcept2.size() <= 20
+      && data.qCase1Height is string && data.qCase1Height.size() <= 50
+      && data.qCase1Angle is string && data.qCase1Angle.size() <= 50
+      && data.qCase1Distance is string && data.qCase1Distance.size() <= 50
+      && data.qCase1Steps is string && data.qCase1Steps.size() <= 2000
+      && data.qCase2DistA is string && data.qCase2DistA.size() <= 50
+      && data.qCase2DistB is string && data.qCase2DistB.size() <= 50
+      && data.qCase2Gap is string && data.qCase2Gap.size() <= 50
+      && data.qCase2Steps is string && data.qCase2Steps.size() <= 2000
+      && data.qCase3Answer is string && data.qCase3Answer.size() <= 50
+      && data.qCase3Strategy is string && data.qCase3Strategy.size() <= 2500
+      && data.qHots1Options is list && data.qHots1Options.size() <= 4
+      && (data.qHots1Options.size() == 0 || (data.qHots1Options[0] is string && data.qHots1Options[0].size() <= 10))
+      && data.qHots2Decision is string && data.qHots2Decision.size() <= 100
+      && data.qHots2Reasoning is string && data.qHots2Reasoning.size() <= 2000
+      && data.reflectionText is string && data.reflectionText.size() <= 2000
+      && data.confidenceLevel is number && data.confidenceLevel >= 1 && data.confidenceLevel <= 5
+      && data.autoScore is number && data.autoScore >= 0 && data.autoScore <= 100
+      && data.autoMaxScore is number && data.autoMaxScore >= 0 && data.autoMaxScore <= 100
+      && data.status in ['submitted', 'graded']
+      && data.teacherScore is number && data.teacherScore >= 0 && data.teacherScore <= 100
+      && data.teacherFeedback is string && data.teacherFeedback.size() <= 2000
+      && data.gradedBy is string && data.gradedBy.size() <= 128
+      && data.createdAt is timestamp
+      && data.updatedAt is timestamp;
+    }
+
+    function isValidTeacher(data) {
+      return data.keys().hasAll(['email', 'name', 'createdAt'])
+      && data.keys().hasOnly(['email', 'name', 'createdAt'])
+      && data.email is string && data.email.size() >= 3 && data.email.size() <= 200
+      && data.name is string && data.name.size() >= 2 && data.name.size() <= 120
+      && data.createdAt is timestamp;
+    }
+
+    match /submissions/{submissionId} {
+      allow get: if isSignedIn() && isValidId(submissionId) && (isTeacher() || existing().studentUid == request.auth.uid);
+      allow list: if isSignedIn() && (isAdminEmail() || resource.data.studentUid == request.auth.uid);
+      allow create: if isVerifiedUser()
+        && isValidId(submissionId)
+        && isValidSubmission(incoming())
+        && incoming().studentUid == request.auth.uid
+        && incoming().studentEmail == request.auth.token.email
+        && incoming().status == 'submitted'
+        && incoming().teacherScore == 0
+        && incoming().teacherFeedback == ''
+        && incoming().gradedBy == ''
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isValidId(submissionId)
+        && isValidSubmission(incoming())
+        && incoming().studentUid == existing().studentUid
+        && incoming().studentEmail == existing().studentEmail
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          (isTeacher() && incoming().diff(existing()).affectedKeys().hasOnly([
+            'status', 'teacherScore', 'teacherFeedback', 'gradedBy', 'updatedAt'
+          ]))
+          ||
+          (existing().studentUid == request.auth.uid
+            && existing().status == 'submitted'
+            && incoming().status == 'submitted'
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'studentName', 'studentClass', 'studentNumber',
+              'simAngleDeg', 'simHeightM', 'simCalculatedDist',
+              'qConcept1', 'qConcept1Reason', 'qConcept2',
+              'qCase1Height', 'qCase1Angle', 'qCase1Distance', 'qCase1Steps',
+              'qCase2DistA', 'qCase2DistB', 'qCase2Gap', 'qCase2Steps',
+              'qCase3Answer', 'qCase3Strategy',
+              'qHots1Options', 'qHots2Decision', 'qHots2Reasoning',
+              'reflectionText', 'confidenceLevel',
+              'autoScore', 'autoMaxScore',
+              'updatedAt'
+            ]))
+        );
+      allow delete: if isTeacher() && isValidId(submissionId);
+    }
+
+    match /teachers/{teacherId} {
+      allow get: if isSignedIn() && isValidId(teacherId) && (request.auth.uid == teacherId || isAdminEmail());
+      allow list: if isAdminEmail();
+      allow create: if isAdminEmail()
+        && isValidId(teacherId)
+        && isValidTeacher(incoming())
+        && incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isAdminEmail() && isValidId(teacherId);
+    }
+  }
+}

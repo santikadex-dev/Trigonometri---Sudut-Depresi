@@ -1,0 +1,6 @@
+{
+  "name": "TRIGONOMETRI LAB",
+  "description": "Worksheet digital interaktif SMA Kelas X: Misi Detektif Trigonometri — Mengukur Jarak dengan Sudut Depresi.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
