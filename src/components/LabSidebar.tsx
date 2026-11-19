@@ -36,7 +36,7 @@ export const LAB_NAV_SECTIONS: LabNavSection[] = [
     shortTitle: 'Memahami Konsep',
     fullTitle: 'Memahami Konsep Sudut Depresi',
     children: [
-      { id: 'contoh-terbimbing', label: 'Contoh Terbimbing' },
+      { id: 'segitiga-siku', label: 'Segitiga Siku-Siku & Rumus' },
       { id: 'kalkulator-tangen', label: 'Kalkulator Tangen' },
     ],
   },

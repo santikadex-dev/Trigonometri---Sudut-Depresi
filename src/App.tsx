@@ -278,7 +278,7 @@ export default function App() {
     setActiveView(view);
     if (view === 'student') {
       if (sectionId === 'pengantar') setActiveMainSection('pengantar');
-      else if (['konsep', 'contoh-terbimbing', 'kalkulator-tangen'].includes(sectionId))
+      else if (['konsep', 'segitiga-siku', 'kalkulator-tangen'].includes(sectionId))
         setActiveMainSection('konsep');
       else if (sectionId === 'simulasi') setActiveMainSection('simulasi');
       else setActiveMainSection('worksheet');
@@ -306,7 +306,7 @@ export default function App() {
     const SUB_IDS = [
       'pengantar',
       'konsep',
-      'contoh-terbimbing',
+      'segitiga-siku',
       'kalkulator-tangen',
       'simulasi',
       'worksheet',
@@ -630,7 +630,7 @@ export default function App() {
               </div>
             </section>
 
-            <ConceptGuideSection onLoadExampleToSim={handleLoadCaseToSim} />
+            <ConceptGuideSection />
 
             <TrigoLabSimulator
               heightM={draft.simHeightM}
