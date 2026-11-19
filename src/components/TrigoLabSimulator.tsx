@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Eye, Layers, Minus, Plus, RotateCcw } from 'lucide-react';
+import { Eye, Minus, Plus, RotateCcw } from 'lucide-react';
 import { LabPresetId, SimulationPreset } from '../types/worksheet';
 import { MathFormula } from './MathFormula';
 
@@ -105,55 +105,56 @@ export const TrigoLabSimulator: React.FC<TrigoLabSimulatorProps> = ({
     onChangeParams(preset.heightM, preset.angleDeg, Number(dist.toFixed(2)));
   };
 
-  // Geometry coordinates inside SVG viewBox 720 x 400
+  // Fixed 1:1 metric scale both vertically and horizontally:
+  // 1 meter = 2 px vertically AND horizontally (1 blueprint grid square of 20px = 10m x 10m).
   const svgGeom = useMemo(() => {
-    const baseX = 112;
-    const groundY = 336;
-    const maxPxHeight = 220;
-    const maxPxWidth = 500;
+    const PX_PER_METER = 2.0;
+    const baseX = 120;
+    const groundY = 320;
 
-    // Visual proportion driven smoothly by ratio d / h while staying within viewport
-    const ratio = metrics.horizontalDist / heightM; // cot(theta)
-    let hPx = 155 + (heightM - 10) * 0.55;
-    let dPx = hPx * ratio;
-
-    if (dPx > maxPxWidth) {
-      const scale = maxPxWidth / dPx;
-      dPx = maxPxWidth;
-      hPx = Math.max(68, hPx * scale);
-    }
-    if (hPx > maxPxHeight) {
-      const scale = maxPxHeight / hPx;
-      hPx = maxPxHeight;
-      dPx = dPx * scale;
-    }
+    const hPx = heightM * PX_PER_METER;
+    const dPx = metrics.horizontalDist * PX_PER_METER;
 
     const eyeY = groundY - hPx;
-    const targetX = Math.min(640, Math.max(baseX + 48, baseX + dPx));
+    const targetX = baseX + dPx;
+    const viewWidth = Math.max(720, Math.ceil((targetX + 80) / 20) * 20);
+
+    const rayLen = Math.hypot(hPx, dPx);
+    const rad = Math.atan2(hPx, dPx);
 
     // Angle arc at observer eye (from 0 deg horizontal down to angleDeg)
-    const arcRadius = Math.min(54, Math.max(28, dPx * 0.35));
-    const rad = Math.atan2(groundY - eyeY, targetX - baseX);
+    const arcRadius = Math.min(48, Math.max(14, Math.min(rayLen * 0.65, hPx * 0.75)));
     const arcEndX = baseX + arcRadius * Math.cos(rad);
     const arcEndY = eyeY + arcRadius * Math.sin(rad);
 
     // Alternate interior angle arc at target (from 180 deg horizontal left up to line of sight)
-    const altArcRadius = Math.min(48, Math.max(26, dPx * 0.3));
+    const altArcRadius = Math.min(44, Math.max(14, Math.min(rayLen * 0.6, hPx * 0.7)));
     const altArcEndX = targetX - altArcRadius * Math.cos(rad);
     const altArcEndY = groundY - altArcRadius * Math.sin(rad);
+
+    const horizEndX = Math.max(baseX + 165, Math.min(viewWidth - 24, targetX + 56));
+    const rightAngleSize = Math.max(4, Math.min(14, hPx * 0.45, Math.max(4, dPx * 0.6)));
+    const angleLabelY = Math.min(groundY - 6, eyeY + Math.max(12, Math.min(20, arcRadius * 0.45)));
+    const altHasRoomLeft = targetX - altArcRadius - 62 > baseX;
 
     return {
       baseX,
       groundY,
       eyeY,
       targetX,
+      dPx,
+      hPx,
+      viewWidth,
       arcRadius,
       arcEndX,
       arcEndY,
       altArcRadius,
       altArcEndX,
       altArcEndY,
-      visualAngleDeg: Math.round((rad * 180) / Math.PI),
+      horizEndX,
+      rightAngleSize,
+      angleLabelY,
+      altHasRoomLeft,
     };
   }, [heightM, metrics.horizontalDist]);
 
@@ -164,42 +165,41 @@ export const TrigoLabSimulator: React.FC<TrigoLabSimulatorProps> = ({
     <section
       id="simulasi"
       aria-labelledby="simulasi-heading"
-      className="py-12 border-t border-slate-200"
+      className="py-6 sm:py-8 lg:py-10 border-t border-slate-200 scroll-mt-28"
     >
-      <div className="flex flex-col gap-2 mb-6">
+      <div className="flex flex-col gap-1.5 mb-3 sm:mb-4">
         <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">
           Bagian 02 · Laboratorium Virtual
         </p>
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2.5">
           <div>
             <h2
               id="simulasi-heading"
-              className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight text-balance"
+              className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight text-balance"
             >
               Simulasi Sudut Depresi & Jarak Horizontal
             </h2>
-            <p className="text-sm sm:text-base text-slate-600 mt-1 max-w-2xl">
-              Geser tinggi pengamat dan sudut depresi untuk mengamati bagaimana perbandingan
-              tangen menentukan jarak objek di permukaan.
+            <p className="text-xs sm:text-sm text-slate-600 mt-0.5 max-w-2xl">
+              Geser tinggi pengamat dan sudut depresi untuk mengamati perubahan jarak secara langsung.
             </p>
           </div>
 
           <button
             type="button"
             onClick={() => handlePresetClick(SIMULATION_PRESETS[0])}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors self-start md:self-auto whitespace-nowrap shrink-0 cursor-pointer"
+            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-[40px] text-xs sm:text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors self-start sm:self-auto whitespace-nowrap shrink-0 cursor-pointer"
           >
-            <RotateCcw className="w-4 h-4" />
+            <RotateCcw className="w-3.5 h-3.5" />
             <span>Reset Simulasi</span>
           </button>
         </div>
       </div>
 
-      {/* Preset Selector (Interactive Segmented Buttons) */}
+      {/* Preset Selector (Single-row horizontal scroll on mobile, wrap on larger screens) */}
       <div
         role="group"
         aria-label="Pilih skenario kasus simulasi"
-        className="flex flex-wrap gap-2 mb-6"
+        className="flex overflow-x-auto sm:flex-wrap gap-1.5 sm:gap-2 pb-1 mb-3 sm:mb-4"
       >
         {SIMULATION_PRESETS.map((preset) => {
           const isActive = preset.id === activePreset;
@@ -208,7 +208,7 @@ export const TrigoLabSimulator: React.FC<TrigoLabSimulatorProps> = ({
               key={preset.id}
               type="button"
               onClick={() => handlePresetClick(preset)}
-              className={`px-4 py-2.5 min-h-[44px] text-sm font-medium rounded-lg border transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 min-h-[38px] sm:min-h-[42px] text-xs sm:text-sm font-medium rounded-lg border transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                 isActive
                   ? 'bg-blue-600 text-white border-blue-600'
                   : 'bg-white text-slate-700 border-slate-200 hover:bg-blue-50 hover:border-blue-200'
@@ -220,86 +220,74 @@ export const TrigoLabSimulator: React.FC<TrigoLabSimulatorProps> = ({
         })}
       </div>
 
-      {/* Two-Zone Sandbox Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-        {/* Left Zone: Interactive SVG Stage (7 cols on desktop) */}
-        <div className="lg:col-span-7 flex flex-col border border-slate-200 rounded-xl bg-white overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-slate-200 bg-slate-50/70">
-            <div className="text-xs text-slate-600">
-              <span className="font-semibold text-slate-900">{currentPresetObj.contextTitle}</span>
-              <span className="mx-2 text-slate-400" aria-hidden="true">
-                ·
-              </span>
-              <span>Target: {currentPresetObj.targetLabel}</span>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={setOnlyGivenInfo}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[36px] text-xs font-medium rounded-md border transition-colors cursor-pointer whitespace-nowrap ${
-                  allAuxHidden
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                }`}
-              >
-                <Eye className="w-3.5 h-3.5" />
-                <span>{allAuxHidden ? 'Tampilkan Keterangan' : 'Hanya Info Soal (h & θ)'}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowRightTriangle((v) => !v)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[36px] text-xs font-medium rounded-md border transition-colors cursor-pointer whitespace-nowrap ${
-                  showRightTriangle
-                    ? 'bg-blue-50 text-blue-700 border-blue-200'
-                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                }`}
-              >
-                <Layers className="w-3.5 h-3.5" />
-                <span>Segitiga Siku-Siku</span>
-              </button>
-            </div>
+      {/* Unified 1-Panel Stage + Compact Controls (1 screen across smartphone, tablet, and desktop) */}
+      <div className="border border-slate-200 rounded-xl bg-white overflow-hidden">
+        {/* Top Stage Header */}
+        <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-4 py-2 border-b border-slate-200 bg-slate-50/70">
+          <div className="text-[11px] sm:text-xs text-slate-600 truncate">
+            <span className="font-semibold text-slate-900">{currentPresetObj.contextTitle}</span>
+            <span className="mx-1.5 text-slate-400" aria-hidden="true">
+              ·
+            </span>
+            <span>Target: {currentPresetObj.targetLabel}</span>
           </div>
 
-          <div className="relative flex-1 bg-[#F8FAFC] p-2 sm:p-4 flex items-center justify-center">
-            <svg
-              viewBox="0 0 720 400"
-              className="w-full h-auto max-h-[380px] select-none"
-              role="img"
-              aria-label={`Diagram simulasi sudut depresi ${angleDeg} derajat pada ketinggian ${heightM} meter menghasilkan jarak horizontal ${metrics.horizontalDist.toFixed(
-                2
-              )} meter`}
-            >
-              <defs>
-                <pattern id="lab-grid" width="24" height="24" patternUnits="userSpaceOnUse">
-                  <path
-                    d="M 24 0 L 0 0 0 24"
-                    fill="none"
-                    stroke="#E2E8F0"
-                    strokeWidth="0.7"
-                  />
-                </pattern>
-              </defs>
+          <button
+            type="button"
+            onClick={setOnlyGivenInfo}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 min-h-[32px] text-[11px] sm:text-xs font-medium rounded-md border transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
+              allAuxHidden
+                ? 'bg-blue-600 text-white border-blue-600'
+                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            <Eye className="w-3.5 h-3.5" />
+            <span>{allAuxHidden ? 'Tampilkan Keterangan' : 'Hanya Info Soal (h & θ)'}</span>
+          </button>
+        </div>
 
-              {/* Coordinate Blueprint Grid */}
-              <rect x="0" y="0" width="720" height="400" fill="url(#lab-grid)" />
+        {/* Interactive SVG Stage (Fixed 1:1 display scale vertically & horizontally) */}
+        <div className="relative bg-[#F8FAFC] p-1.5 sm:p-2.5 overflow-x-auto">
+          <svg
+            viewBox={`0 0 ${svgGeom.viewWidth} 400`}
+            width={svgGeom.viewWidth}
+            height={400}
+            className="block h-[160px] sm:h-[220px] lg:h-[270px] w-auto max-w-none mx-auto select-none"
+            role="img"
+            aria-label={`Diagram simulasi sudut depresi ${angleDeg} derajat pada ketinggian ${heightM} meter menghasilkan jarak horizontal ${metrics.horizontalDist.toFixed(
+              2
+            )} meter`}
+          >
+            <defs>
+              <pattern id="lab-grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                <path
+                  d="M 20 0 L 0 0 0 20"
+                  fill="none"
+                  stroke="#E2E8F0"
+                  strokeWidth="0.7"
+                />
+              </pattern>
+            </defs>
 
-              {/* Ground / Sea Surface */}
-              <rect
-                x="0"
-                y={svgGeom.groundY}
-                width="720"
-                height={400 - svgGeom.groundY}
-                fill="#EFF6FF"
-              />
-              <line
-                x1="0"
-                y1={svgGeom.groundY}
-                x2="720"
-                y2={svgGeom.groundY}
-                stroke="#64748B"
-                strokeWidth="2"
-              />
+            {/* Coordinate Blueprint Grid (1 square = 10m x 10m) */}
+            <rect x="0" y="0" width={svgGeom.viewWidth} height="400" fill="url(#lab-grid)" />
+
+            {/* Ground / Sea Surface */}
+            <rect
+              x="0"
+              y={svgGeom.groundY}
+              width={svgGeom.viewWidth}
+              height={400 - svgGeom.groundY}
+              fill="#EFF6FF"
+            />
+            <line
+              x1="0"
+              y1={svgGeom.groundY}
+              x2={svgGeom.viewWidth}
+              y2={svgGeom.groundY}
+              stroke="#64748B"
+              strokeWidth="2"
+            />
 
               {/* Right Triangle Shading */}
               {showRightTriangle && (
@@ -377,9 +365,11 @@ export const TrigoLabSimulator: React.FC<TrigoLabSimulatorProps> = ({
 
               {/* Right-angle marker at tower base */}
               <polyline
-                points={`${svgGeom.baseX},${svgGeom.groundY - 14} ${svgGeom.baseX + 14},${
-                  svgGeom.groundY - 14
-                } ${svgGeom.baseX + 14},${svgGeom.groundY}`}
+                points={`${svgGeom.baseX},${svgGeom.groundY - svgGeom.rightAngleSize} ${
+                  svgGeom.baseX + svgGeom.rightAngleSize
+                },${svgGeom.groundY - svgGeom.rightAngleSize} ${
+                  svgGeom.baseX + svgGeom.rightAngleSize
+                },${svgGeom.groundY}`}
                 fill="none"
                 stroke="#475569"
                 strokeWidth="1.5"
@@ -389,14 +379,14 @@ export const TrigoLabSimulator: React.FC<TrigoLabSimulatorProps> = ({
               <line
                 x1={svgGeom.baseX}
                 y1={svgGeom.eyeY}
-                x2={Math.min(685, svgGeom.targetX + 45)}
+                x2={svgGeom.horizEndX}
                 y2={svgGeom.eyeY}
                 stroke="#2563EB"
                 strokeWidth="1.8"
                 strokeDasharray="6 5"
               />
               <text
-                x={Math.min(685, svgGeom.targetX + 42)}
+                x={svgGeom.horizEndX - 3}
                 y={svgGeom.eyeY - 8}
                 textAnchor="end"
                 fill="#2563EB"
@@ -436,7 +426,7 @@ export const TrigoLabSimulator: React.FC<TrigoLabSimulatorProps> = ({
               />
               <text
                 x={svgGeom.baseX + svgGeom.arcRadius + 10}
-                y={svgGeom.eyeY + 20}
+                y={svgGeom.angleLabelY}
                 fill="#1D4ED8"
                 fontSize="13"
                 fontWeight="700"
@@ -459,9 +449,13 @@ export const TrigoLabSimulator: React.FC<TrigoLabSimulatorProps> = ({
                     strokeWidth="2.2"
                   />
                   <text
-                    x={svgGeom.targetX - svgGeom.altArcRadius - 8}
-                    y={svgGeom.groundY - 12}
-                    textAnchor="end"
+                    x={
+                      svgGeom.altHasRoomLeft
+                        ? svgGeom.targetX - svgGeom.altArcRadius - 8
+                        : svgGeom.targetX + 10
+                    }
+                    y={svgGeom.altHasRoomLeft ? svgGeom.groundY - 12 : svgGeom.groundY - 18}
+                    textAnchor={svgGeom.altHasRoomLeft ? 'end' : 'start'}
                     fill="#0369A1"
                     fontSize="12"
                     fontWeight="600"
@@ -474,12 +468,12 @@ export const TrigoLabSimulator: React.FC<TrigoLabSimulatorProps> = ({
 
               {/* Target Marker (Ship / Car / Boat) */}
               <g transform={`translate(${svgGeom.targetX}, ${svgGeom.groundY})`}>
-                <path d="M -18 -2 L 18 -2 L 13 6 L -13 6 Z" fill="#1E293B" />
-                <rect x="-8" y="-11" width="14" height="9" rx="2" fill="#2563EB" />
-                <circle cx="0" cy="0" r="3" fill="#FFFFFF" />
+                <path d="M -14 -2 L 14 -2 L 10 5 L -10 5 Z" fill="#1E293B" />
+                <rect x="-6" y="-10" width="12" height="8" rx="2" fill="#2563EB" />
+                <circle cx="0" cy="0" r="2.5" fill="#FFFFFF" />
                 <text
                   x="0"
-                  y="24"
+                  y="20"
                   textAnchor="middle"
                   fill="#1E293B"
                   fontSize="11"
@@ -515,20 +509,20 @@ export const TrigoLabSimulator: React.FC<TrigoLabSimulatorProps> = ({
                 strokeWidth="1.2"
               />
               <rect
-                x={svgGeom.baseX - 96}
-                y={(svgGeom.eyeY + svgGeom.groundY) / 2 - 12}
-                width="44"
+                x={svgGeom.baseX - 102}
+                y={(svgGeom.eyeY + svgGeom.groundY) / 2 - 11}
+                width="50"
                 height="22"
                 rx="4"
                 fill="#FFFFFF"
                 stroke="#E2E8F0"
               />
               <text
-                x={svgGeom.baseX - 74}
-                y={(svgGeom.eyeY + svgGeom.groundY) / 2 + 3}
+                x={svgGeom.baseX - 77}
+                y={(svgGeom.eyeY + svgGeom.groundY) / 2 + 4}
                 textAnchor="middle"
                 fill="#1E293B"
-                fontSize="11.5"
+                fontSize="11"
                 fontWeight="600"
                 fontFamily="IBM Plex Mono, monospace"
               >
@@ -540,17 +534,17 @@ export const TrigoLabSimulator: React.FC<TrigoLabSimulatorProps> = ({
                 <g>
                   <line
                     x1={svgGeom.baseX}
-                    y1={svgGeom.groundY + 34}
+                    y1={svgGeom.groundY + 44}
                     x2={svgGeom.targetX}
-                    y2={svgGeom.groundY + 34}
+                    y2={svgGeom.groundY + 44}
                     stroke="#2563EB"
                     strokeWidth="1.6"
                   />
-                  <circle cx={svgGeom.baseX} cy={svgGeom.groundY + 34} r="3" fill="#2563EB" />
-                  <circle cx={svgGeom.targetX} cy={svgGeom.groundY + 34} r="3" fill="#2563EB" />
+                  <circle cx={svgGeom.baseX} cy={svgGeom.groundY + 44} r="3" fill="#2563EB" />
+                  <circle cx={svgGeom.targetX} cy={svgGeom.groundY + 44} r="3" fill="#2563EB" />
                   <rect
-                    x={(svgGeom.baseX + svgGeom.targetX) / 2 - 58}
-                    y={svgGeom.groundY + 23}
+                    x={Math.max(svgGeom.baseX, (svgGeom.baseX + svgGeom.targetX) / 2 - 58)}
+                    y={svgGeom.groundY + 33}
                     width="116"
                     height="22"
                     rx="4"
@@ -558,8 +552,8 @@ export const TrigoLabSimulator: React.FC<TrigoLabSimulatorProps> = ({
                     stroke="#BFDBFE"
                   />
                   <text
-                    x={(svgGeom.baseX + svgGeom.targetX) / 2}
-                    y={svgGeom.groundY + 38}
+                    x={Math.max(svgGeom.baseX + 58, (svgGeom.baseX + svgGeom.targetX) / 2)}
+                    y={svgGeom.groundY + 48}
                     textAnchor="middle"
                     fill="#1D4ED8"
                     fontSize="11.5"
@@ -571,90 +565,35 @@ export const TrigoLabSimulator: React.FC<TrigoLabSimulatorProps> = ({
                 </g>
               )}
 
-            </svg>
-          </div>
-
-          <div className="px-4 py-3.5 border-t border-slate-200 bg-white space-y-3 text-xs text-slate-600">
-            <p className="leading-relaxed">{currentPresetObj.contextDesc}</p>
-
-            <div className="pt-2.5 border-t border-slate-100 space-y-2">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-semibold text-slate-800">
-                  Tampilkan keterangan gambar (di luar info soal <MathFormula tex="h" /> &amp;{' '}
-                  <MathFormula tex="\theta" />):
-                </span>
-                <button
-                  type="button"
-                  onClick={setOnlyGivenInfo}
-                  className="text-blue-600 font-medium hover:underline cursor-pointer"
-                >
-                  {allAuxHidden ? 'Tampilkan Semua' : 'Sembunyikan Semua'}
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <label className="inline-flex items-center gap-2 min-h-[36px] px-2.5 py-1.5 rounded-md border border-slate-200 bg-slate-50/50 cursor-pointer font-medium text-slate-700 hover:bg-slate-50">
-                  <input
-                    type="checkbox"
-                    checked={showAlternateAngle}
-                    onChange={(e) => setShowAlternateAngle(e.target.checked)}
-                    className="w-4 h-4 accent-blue-600 rounded shrink-0"
-                  />
-                  <span>Sudut berseberangan (θ bawah)</span>
-                </label>
-
-                <label className="inline-flex items-center gap-2 min-h-[36px] px-2.5 py-1.5 rounded-md border border-slate-200 bg-slate-50/50 cursor-pointer font-medium text-slate-700 hover:bg-slate-50">
-                  <input
-                    type="checkbox"
-                    checked={showRightTriangle}
-                    onChange={(e) => setShowRightTriangle(e.target.checked)}
-                    className="w-4 h-4 accent-blue-600 rounded shrink-0"
-                  />
-                  <span>Arsir segitiga siku-siku</span>
-                </label>
-
-                <label className="inline-flex items-center gap-2 min-h-[36px] px-2.5 py-1.5 rounded-md border border-slate-200 bg-slate-50/50 cursor-pointer font-medium text-slate-700 hover:bg-slate-50">
-                  <input
-                    type="checkbox"
-                    checked={showHorizontalDistance}
-                    onChange={(e) => setShowHorizontalDistance(e.target.checked)}
-                    className="w-4 h-4 accent-blue-600 rounded shrink-0"
-                  />
-                  <span>Jarak horizontal (d)</span>
-                </label>
-              </div>
-            </div>
-          </div>
+          </svg>
         </div>
 
-        {/* Right Zone: Controls & Live Calculation Deck (5 cols on desktop) */}
-        <div className="lg:col-span-5 flex flex-col justify-between gap-5 border border-slate-200 rounded-xl p-5 bg-white">
-          <div className="space-y-5">
-            <div>
-              <h3 className="text-base font-semibold text-slate-900">Panel Kendali Pengamatan</h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Atur tinggi titik pengamatan dan sudut depresi secara langsung.
-              </p>
-            </div>
+        {/* Context Description Strip */}
+        <div className="px-3 sm:px-4 py-1.5 border-t border-slate-200 bg-white text-[11px] sm:text-xs text-slate-600">
+          <p className="leading-snug">{currentPresetObj.contextDesc}</p>
+        </div>
 
+        {/* Integrated Compact Control Panel (Same Card, No Jarak d Readout) */}
+        <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-slate-200 bg-slate-50/60">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-5">
             {/* Height Slider + Step Buttons */}
-            <div className="space-y-2">
+            <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <label htmlFor="slider-height" className="text-sm font-medium text-slate-700">
+                <label htmlFor="slider-height" className="text-[11px] sm:text-xs font-medium text-slate-700">
                   Tinggi Pengamat (h)
                 </label>
-                <span className="font-mono text-sm font-semibold text-slate-900 tabular-nums">
+                <span className="font-mono text-xs sm:text-sm font-semibold text-slate-900 tabular-nums">
                   {heightM} m
                 </span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <button
                   type="button"
                   aria-label="Kurangi tinggi 5 meter"
                   onClick={() => updateValues(heightM - 5, angleDeg)}
-                  className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 active:scale-[0.98] transition-transform cursor-pointer"
+                  className="min-w-[34px] min-h-[34px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center rounded-md border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 active:scale-[0.98] transition-transform cursor-pointer"
                 >
-                  <Minus className="w-4 h-4" />
+                  <Minus className="w-3.5 h-3.5" />
                 </button>
                 <input
                   id="slider-height"
@@ -664,18 +603,18 @@ export const TrigoLabSimulator: React.FC<TrigoLabSimulatorProps> = ({
                   step={1}
                   value={heightM}
                   onChange={(e) => updateValues(Number(e.target.value), angleDeg)}
-                  className="w-full h-2 accent-blue-600 cursor-pointer"
+                  className="w-full h-1.5 accent-blue-600 cursor-pointer"
                 />
                 <button
                   type="button"
                   aria-label="Tambah tinggi 5 meter"
                   onClick={() => updateValues(heightM + 5, angleDeg)}
-                  className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 active:scale-[0.98] transition-transform cursor-pointer"
+                  className="min-w-[34px] min-h-[34px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center rounded-md border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 active:scale-[0.98] transition-transform cursor-pointer"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-3.5 h-3.5" />
                 </button>
               </div>
-              <div className="flex justify-between text-[11px] text-slate-400 font-mono tabular-nums">
+              <div className="flex justify-between text-[10px] text-slate-400 font-mono tabular-nums">
                 <span>10 m</span>
                 <span>65 m</span>
                 <span>120 m</span>
@@ -683,23 +622,23 @@ export const TrigoLabSimulator: React.FC<TrigoLabSimulatorProps> = ({
             </div>
 
             {/* Angle Slider + Step Buttons */}
-            <div className="space-y-2">
+            <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <label htmlFor="slider-angle" className="text-sm font-medium text-slate-700">
+                <label htmlFor="slider-angle" className="text-[11px] sm:text-xs font-medium text-slate-700">
                   Sudut Depresi (θ)
                 </label>
-                <span className="font-mono text-sm font-semibold text-blue-600 tabular-nums">
+                <span className="font-mono text-xs sm:text-sm font-semibold text-blue-600 tabular-nums">
                   {angleDeg}°
                 </span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <button
                   type="button"
                   aria-label="Kurangi sudut 1 derajat"
                   onClick={() => updateValues(heightM, angleDeg - 1)}
-                  className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 active:scale-[0.98] transition-transform cursor-pointer"
+                  className="min-w-[34px] min-h-[34px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center rounded-md border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 active:scale-[0.98] transition-transform cursor-pointer"
                 >
-                  <Minus className="w-4 h-4" />
+                  <Minus className="w-3.5 h-3.5" />
                 </button>
                 <input
                   id="slider-angle"
@@ -709,55 +648,98 @@ export const TrigoLabSimulator: React.FC<TrigoLabSimulatorProps> = ({
                   step={1}
                   value={angleDeg}
                   onChange={(e) => updateValues(heightM, Number(e.target.value))}
-                  className="w-full h-2 accent-blue-600 cursor-pointer"
+                  className="w-full h-1.5 accent-blue-600 cursor-pointer"
                 />
                 <button
                   type="button"
                   aria-label="Tambah sudut 1 derajat"
                   onClick={() => updateValues(heightM, angleDeg + 1)}
-                  className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 active:scale-[0.98] transition-transform cursor-pointer"
+                  className="min-w-[34px] min-h-[34px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center rounded-md border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 active:scale-[0.98] transition-transform cursor-pointer"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-3.5 h-3.5" />
                 </button>
               </div>
-              <div className="flex justify-between text-[11px] text-slate-400 font-mono tabular-nums">
+              <div className="flex justify-between text-[10px] text-slate-400 font-mono tabular-nums">
                 <span>10° (jauh)</span>
                 <span>45° (d = h)</span>
                 <span>80° (dekat)</span>
               </div>
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Live Calculation Readout */}
-          <div className="bg-blue-50/70 border border-blue-100 rounded-xl p-4 space-y-3">
-            <div className="flex items-center justify-between border-b border-blue-200/70 pb-2">
-              <span className="text-xs font-semibold text-blue-900">
-                Kalkulasi Langsung Perbandingan Tangen
-              </span>
-              <span className="text-xs text-blue-700 tabular-nums">
-                <MathFormula tex={`\\tan(${angleDeg}^\\circ) \\approx ${metrics.tanVal.toFixed(4)}`} />
-              </span>
-            </div>
+      {/* Checklist & Live Calculation Readout Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 items-start">
+        {/* Checklist Keterangan Gambar */}
+        <div className="lg:col-span-7 border border-slate-200 rounded-xl p-3.5 sm:p-4 bg-white space-y-2.5 text-xs text-slate-600">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="font-semibold text-slate-800">
+              Tampilkan keterangan gambar (di luar info soal <MathFormula tex="h" /> &amp;{' '}
+              <MathFormula tex="\theta" />):
+            </span>
+            <button
+              type="button"
+              onClick={setOnlyGivenInfo}
+              className="text-blue-600 font-medium hover:underline cursor-pointer"
+            >
+              {allAuxHidden ? 'Tampilkan Semua' : 'Sembunyikan Semua'}
+            </button>
+          </div>
 
-            <div className="text-xs sm:text-sm text-slate-800 space-y-2 tabular-nums">
-              <MathFormula
-                block
-                tex={`\\tan(\\theta) = \\frac{\\text{depan}}{\\text{samping}} = \\frac{h}{d}`}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <label className="inline-flex items-center gap-2 min-h-[36px] px-2.5 py-1.5 rounded-md border border-slate-200 bg-slate-50/50 cursor-pointer font-medium text-slate-700 hover:bg-slate-50">
+              <input
+                type="checkbox"
+                checked={showAlternateAngle}
+                onChange={(e) => setShowAlternateAngle(e.target.checked)}
+                className="w-4 h-4 accent-blue-600 rounded shrink-0"
               />
-              <MathFormula
-                block
-                tex={`d = \\frac{h}{\\tan(${angleDeg}^\\circ)} = \\frac{${heightM}}{${metrics.tanVal.toFixed(4)}}`}
-              />
-            </div>
+              <span>Sudut berseberangan (θ bawah)</span>
+            </label>
 
-            <div className="pt-1">
-              <div className="bg-white border border-blue-200 rounded-lg p-3 flex items-center justify-between">
-                <p className="text-xs font-medium text-slate-600">Jarak Horizontal (d)</p>
-                <p className="font-mono text-lg font-bold text-blue-600 tabular-nums">
-                  {metrics.horizontalDist.toFixed(2)} m
-                </p>
-              </div>
-            </div>
+            <label className="inline-flex items-center gap-2 min-h-[36px] px-2.5 py-1.5 rounded-md border border-slate-200 bg-slate-50/50 cursor-pointer font-medium text-slate-700 hover:bg-slate-50">
+              <input
+                type="checkbox"
+                checked={showRightTriangle}
+                onChange={(e) => setShowRightTriangle(e.target.checked)}
+                className="w-4 h-4 accent-blue-600 rounded shrink-0"
+              />
+              <span>Arsir segitiga siku-siku</span>
+            </label>
+
+            <label className="inline-flex items-center gap-2 min-h-[36px] px-2.5 py-1.5 rounded-md border border-slate-200 bg-slate-50/50 cursor-pointer font-medium text-slate-700 hover:bg-slate-50">
+              <input
+                type="checkbox"
+                checked={showHorizontalDistance}
+                onChange={(e) => setShowHorizontalDistance(e.target.checked)}
+                className="w-4 h-4 accent-blue-600 rounded shrink-0"
+              />
+              <span>Jarak horizontal (d)</span>
+            </label>
+          </div>
+        </div>
+
+        {/* Live LaTeX Calculation Readout */}
+        <div className="lg:col-span-5 bg-blue-50/70 border border-blue-100 rounded-xl p-4 space-y-2.5">
+          <div className="flex items-center justify-between border-b border-blue-200/70 pb-2">
+            <span className="text-xs font-semibold text-blue-900">
+              Kalkulasi Langsung Perbandingan Tangen
+            </span>
+            <span className="text-xs text-blue-700 tabular-nums">
+              <MathFormula tex={`\\tan(${angleDeg}^\\circ) \\approx ${metrics.tanVal.toFixed(4)}`} />
+            </span>
+          </div>
+
+          <div className="text-xs sm:text-sm text-slate-800 space-y-1.5 tabular-nums">
+            <MathFormula
+              block
+              tex={`\\tan(\\theta) = \\frac{\\text{depan}}{\\text{samping}} = \\frac{h}{d}`}
+            />
+            <MathFormula
+              block
+              tex={`d = \\frac{h}{\\tan(${angleDeg}^\\circ)} = \\frac{${heightM}}{${metrics.tanVal.toFixed(4)}} = ${metrics.horizontalDist.toFixed(2)}\\text{ m}`}
+            />
           </div>
         </div>
       </div>

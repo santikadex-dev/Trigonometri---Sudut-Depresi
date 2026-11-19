@@ -10,7 +10,16 @@ import {
   setDoc,
   where,
 } from 'firebase/firestore';
-import { Compass, BookOpen, ClipboardList, UserCheck, ArrowRight } from 'lucide-react';
+import {
+  Compass,
+  BookOpen,
+  ClipboardList,
+  UserCheck,
+  ArrowRight,
+  PanelLeft,
+  PanelLeftClose,
+  ChevronRight,
+} from 'lucide-react';
 import { auth, db, googleProvider, handleFirestoreError, OperationType } from './firebase';
 import {
   INITIAL_WORKSHEET_DRAFT,
@@ -24,6 +33,7 @@ import { TrigoLabSimulator } from './components/TrigoLabSimulator';
 import { ConceptGuideSection } from './components/ConceptGuideSection';
 import { WorksheetSection } from './components/WorksheetSection';
 import { TeacherDashboard } from './components/TeacherDashboard';
+import { LAB_NAV_SECTIONS, LabSidebar } from './components/LabSidebar';
 
 const DRAFT_STORAGE_KEY = 'trigonometri_lab_draft_v1';
 
@@ -35,6 +45,11 @@ export default function App() {
   const [activeView, setActiveView] = useState<'student' | 'teacher'>('student');
   const [activePreset, setActivePreset] = useState<LabPresetId>('mercusuar');
   const [heroImgFailed, setHeroImgFailed] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeMainSection, setActiveMainSection] = useState<
+    'pengantar' | 'konsep' | 'simulasi' | 'worksheet'
+  >('pengantar');
+  const [activeSubSection, setActiveSubSection] = useState<string>('pengantar');
 
   const [draft, setDraft] = useState<WorksheetDraft>(() => {
     try {
@@ -261,29 +276,142 @@ export default function App() {
 
   const navigateToSection = (sectionId: string, view: 'student' | 'teacher' = 'student') => {
     setActiveView(view);
+    if (view === 'student') {
+      if (sectionId === 'pengantar') setActiveMainSection('pengantar');
+      else if (['konsep', 'contoh-terbimbing', 'kalkulator-tangen'].includes(sectionId))
+        setActiveMainSection('konsep');
+      else if (sectionId === 'simulasi') setActiveMainSection('simulasi');
+      else setActiveMainSection('worksheet');
+      setActiveSubSection(sectionId);
+    }
     setTimeout(() => {
-      document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
+      if (view === 'teacher' && sectionId === 'guru') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
+      }
     }, 60);
   };
 
+  // Scroll-spy tracking for sticky heading indicator & sidebar active highlight
+  useEffect(() => {
+    if (activeView !== 'student') return;
+
+    const MAIN_IDS: ('pengantar' | 'konsep' | 'simulasi' | 'worksheet')[] = [
+      'pengantar',
+      'konsep',
+      'simulasi',
+      'worksheet',
+    ];
+    const SUB_IDS = [
+      'pengantar',
+      'konsep',
+      'contoh-terbimbing',
+      'kalkulator-tangen',
+      'simulasi',
+      'worksheet',
+      'identitas-siswa',
+      'cek-konsep',
+      'kasus-lapangan',
+      'evaluasi',
+    ];
+
+    let rafId = 0;
+
+    const updateActiveFromScroll = () => {
+      const triggerOffset = 140;
+      const atBottom =
+        window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 24;
+
+      if (atBottom) {
+        setActiveMainSection('worksheet');
+        setActiveSubSection('evaluasi');
+        return;
+      }
+
+      let currentMain: 'pengantar' | 'konsep' | 'simulasi' | 'worksheet' = 'pengantar';
+      for (const id of MAIN_IDS) {
+        const el = document.getElementById(id);
+        if (el && el.getBoundingClientRect().top <= triggerOffset) {
+          currentMain = id;
+        }
+      }
+
+      let currentSub = currentMain as string;
+      for (const id of SUB_IDS) {
+        const el = document.getElementById(id);
+        if (el && el.getBoundingClientRect().top <= triggerOffset + 20) {
+          currentSub = id;
+        }
+      }
+
+      setActiveMainSection(currentMain);
+      setActiveSubSection(currentSub);
+    };
+
+    const handleScroll = () => {
+      if (rafId) return;
+      rafId = window.requestAnimationFrame(() => {
+        rafId = 0;
+        updateActiveFromScroll();
+      });
+    };
+
+    updateActiveFromScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleScroll, { passive: true });
+
+    return () => {
+      if (rafId) window.cancelAnimationFrame(rafId);
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+    };
+  }, [activeView]);
+
+  const currentSectionInfo =
+    LAB_NAV_SECTIONS.find((s) => s.id === activeMainSection) || LAB_NAV_SECTIONS[0];
+  const currentSectionIndex = LAB_NAV_SECTIONS.findIndex((s) => s.id === activeMainSection);
+  const currentSubInfo = currentSectionInfo.children?.find((c) => c.id === activeSubSection);
+
   return (
     <div className="min-h-screen bg-white text-slate-800 flex flex-col pb-20 md:pb-0">
-      {/* Three-Zone Top Bar Contract */}
+      {/* Three-Zone Top Bar + Sticky Active-Section Heading */}
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-8">
-          {/* Zone 1: Single-line Brand Wordmark */}
-          <a
-            href="#pengantar"
-            onClick={(e) => {
-              e.preventDefault();
-              navigateToSection('pengantar', 'student');
-            }}
-            className="text-base sm:text-lg font-bold tracking-tight text-slate-900 whitespace-nowrap shrink-0"
-          >
-            TRIGONOMETRI LAB
-          </a>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4 sm:gap-8">
+          {/* Zone 1: Sidebar Toggle + Single-line Brand Wordmark */}
+          <div className="flex items-center gap-2.5 min-w-0">
+            <button
+              type="button"
+              onClick={() => setSidebarOpen((prev) => !prev)}
+              aria-expanded={sidebarOpen}
+              aria-label={sidebarOpen ? 'Sembunyikan sidebar bagian' : 'Tampilkan sidebar bagian'}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 min-h-[38px] text-xs font-semibold rounded-lg border transition-colors cursor-pointer shrink-0 ${
+                sidebarOpen
+                  ? 'bg-blue-50 text-blue-700 border-blue-200'
+                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              {sidebarOpen ? (
+                <PanelLeftClose className="w-4 h-4" />
+              ) : (
+                <PanelLeft className="w-4 h-4" />
+              )}
+              <span className="hidden sm:inline">Daftar Bagian</span>
+            </button>
 
-          {/* Zone 2: Concise 1-2 Word Nav Links */}
+            <a
+              href="#pengantar"
+              onClick={(e) => {
+                e.preventDefault();
+                navigateToSection('pengantar', 'student');
+              }}
+              className="text-sm sm:text-lg font-bold tracking-tight text-slate-900 whitespace-nowrap shrink-0"
+            >
+              TRIGONOMETRI LAB
+            </a>
+          </div>
+
+          {/* Zone 2: Concise 1-2 Word Nav Links with Active Section Indicator */}
           <nav
             aria-label="Navigasi utama"
             className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600"
@@ -291,29 +419,43 @@ export default function App() {
             <button
               type="button"
               onClick={() => navigateToSection('konsep', 'student')}
-              className="hover:text-blue-600 hover:underline underline-offset-4 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+              className={`hover:text-blue-600 underline-offset-4 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                activeView === 'student' && activeMainSection === 'konsep'
+                  ? 'text-blue-600 font-semibold underline'
+                  : 'hover:underline'
+              }`}
             >
               Konsep
             </button>
             <button
               type="button"
               onClick={() => navigateToSection('simulasi', 'student')}
-              className="hover:text-blue-600 hover:underline underline-offset-4 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+              className={`hover:text-blue-600 underline-offset-4 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                activeView === 'student' && activeMainSection === 'simulasi'
+                  ? 'text-blue-600 font-semibold underline'
+                  : 'hover:underline'
+              }`}
             >
               Simulasi
             </button>
             <button
               type="button"
               onClick={() => navigateToSection('worksheet', 'student')}
-              className="hover:text-blue-600 hover:underline underline-offset-4 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+              className={`hover:text-blue-600 underline-offset-4 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                activeView === 'student' && activeMainSection === 'worksheet'
+                  ? 'text-blue-600 font-semibold underline'
+                  : 'hover:underline'
+              }`}
             >
               Worksheet
             </button>
             <button
               type="button"
               onClick={() => navigateToSection('guru', 'teacher')}
-              className={`hover:text-blue-600 hover:underline underline-offset-4 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-                activeView === 'teacher' ? 'text-blue-600 font-semibold' : ''
+              className={`hover:text-blue-600 underline-offset-4 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                activeView === 'teacher'
+                  ? 'text-blue-600 font-semibold underline'
+                  : 'hover:underline'
               }`}
             >
               Panel Guru
@@ -326,7 +468,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={handleSignOut}
-                className="px-4 py-2 min-h-[40px] text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                className="px-3.5 sm:px-4 py-1.5 min-h-[38px] text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
               >
                 Keluar ({user.displayName?.split(' ')[0] || 'Akun'})
               </button>
@@ -334,29 +476,99 @@ export default function App() {
               <button
                 type="button"
                 onClick={handleSignIn}
-                className="px-4 py-2 min-h-[40px] text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                className="px-3.5 sm:px-4 py-1.5 min-h-[38px] text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
               >
                 Masuk Google
               </button>
             )}
           </div>
         </div>
+
+        {/* Sticky Active-Section Heading Strip (Always visible while scrolling) */}
+        <div className="border-t border-slate-100 bg-slate-50/90">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 h-9 sm:h-10 flex items-center justify-between gap-3">
+            {activeView === 'teacher' ? (
+              <div className="flex items-center gap-2 min-w-0 text-xs">
+                <span className="font-mono text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-blue-600 shrink-0">
+                  PANEL GURU
+                </span>
+                <span className="text-slate-300" aria-hidden="true">
+                  ·
+                </span>
+                <span className="font-semibold text-slate-900 truncate">
+                  Dasbor Pemeriksaan &amp; Penilaian Siswa
+                </span>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 text-xs">
+                  <span className="font-mono text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-blue-600 shrink-0">
+                    {currentSectionInfo.stepLabel}
+                  </span>
+                  <span className="text-slate-300 shrink-0" aria-hidden="true">
+                    ·
+                  </span>
+                  <span className="font-semibold text-slate-900 truncate">
+                    <span className="sm:hidden">{currentSectionInfo.shortTitle}</span>
+                    <span className="hidden sm:inline">{currentSectionInfo.fullTitle}</span>
+                  </span>
+                  {currentSubInfo && (
+                    <span className="hidden md:inline-flex items-center gap-1.5 text-slate-500 shrink-0">
+                      <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="font-medium text-slate-700">{currentSubInfo.label}</span>
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2.5 shrink-0">
+                  <span className="font-mono text-[11px] text-slate-500 tabular-nums">
+                    {currentSectionIndex + 1} / {LAB_NAV_SECTIONS.length}
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* 4-Step Segmented Section Progress Indicator */}
+          {activeView === 'student' && (
+            <div className="grid grid-cols-4 h-0.5 bg-slate-200/70" aria-hidden="true">
+              {LAB_NAV_SECTIONS.map((sec, idx) => (
+                <div
+                  key={sec.id}
+                  className={`transition-colors duration-200 ${
+                    idx <= currentSectionIndex ? 'bg-blue-600' : 'bg-transparent'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </header>
 
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6">
-        {activeView === 'teacher' ? (
-          <TeacherDashboard
-            user={user}
-            isTeacher={isTeacher}
-            submissions={allSubmissions}
-            loading={loadingTeacherData}
-            onSignIn={handleSignIn}
-            onSignOut={handleSignOut}
-          />
-        ) : (
-          <>
-            {/* Hero Section / Orientasi Misi */}
-            <section id="pengantar" className="py-10 sm:py-14">
+      <div className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 flex items-start gap-7">
+        <LabSidebar
+          open={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          activeMainId={activeMainSection}
+          activeSubId={activeSubSection}
+          activeView={activeView}
+          onJumpToSection={navigateToSection}
+        />
+
+        <main className="flex-1 min-w-0">
+          {activeView === 'teacher' ? (
+            <TeacherDashboard
+              user={user}
+              isTeacher={isTeacher}
+              submissions={allSubmissions}
+              loading={loadingTeacherData}
+              onSignIn={handleSignIn}
+              onSignOut={handleSignOut}
+            />
+          ) : (
+            <>
+              {/* Hero Section / Orientasi Misi */}
+              <section id="pengantar" className="py-10 sm:py-14 scroll-mt-28">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
                 <div className="lg:col-span-6 flex flex-col justify-center space-y-5">
                   <p className="text-xs sm:text-sm font-medium text-slate-500">
@@ -441,9 +653,10 @@ export default function App() {
               onSignIn={handleSignIn}
               mySubmissions={mySubmissions}
             />
-          </>
-        )}
-      </main>
+            </>
+          )}
+        </main>
+      </div>
 
       <footer className="border-t border-slate-200 bg-white py-6 mt-8">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
@@ -473,7 +686,11 @@ export default function App() {
         <button
           type="button"
           onClick={() => navigateToSection('konsep', 'student')}
-          className="flex flex-col items-center justify-center gap-1 text-slate-600 hover:text-blue-600 cursor-pointer"
+          className={`flex flex-col items-center justify-center gap-1 cursor-pointer ${
+            activeView === 'student' && activeMainSection === 'konsep'
+              ? 'text-blue-600 font-semibold'
+              : 'text-slate-600 hover:text-blue-600'
+          }`}
         >
           <BookOpen className="w-5 h-5" />
           <span className="text-[11px] font-medium">Konsep</span>
@@ -481,7 +698,11 @@ export default function App() {
         <button
           type="button"
           onClick={() => navigateToSection('simulasi', 'student')}
-          className="flex flex-col items-center justify-center gap-1 text-slate-600 hover:text-blue-600 cursor-pointer"
+          className={`flex flex-col items-center justify-center gap-1 cursor-pointer ${
+            activeView === 'student' && activeMainSection === 'simulasi'
+              ? 'text-blue-600 font-semibold'
+              : 'text-slate-600 hover:text-blue-600'
+          }`}
         >
           <Compass className="w-5 h-5" />
           <span className="text-[11px] font-medium">Simulasi</span>
@@ -489,7 +710,11 @@ export default function App() {
         <button
           type="button"
           onClick={() => navigateToSection('worksheet', 'student')}
-          className="flex flex-col items-center justify-center gap-1 text-slate-600 hover:text-blue-600 cursor-pointer"
+          className={`flex flex-col items-center justify-center gap-1 cursor-pointer ${
+            activeView === 'student' && activeMainSection === 'worksheet'
+              ? 'text-blue-600 font-semibold'
+              : 'text-slate-600 hover:text-blue-600'
+          }`}
         >
           <ClipboardList className="w-5 h-5" />
           <span className="text-[11px] font-medium">Worksheet</span>
@@ -498,7 +723,7 @@ export default function App() {
           type="button"
           onClick={() => navigateToSection('guru', 'teacher')}
           className={`flex flex-col items-center justify-center gap-1 cursor-pointer ${
-            activeView === 'teacher' ? 'text-blue-600' : 'text-slate-600 hover:text-blue-600'
+            activeView === 'teacher' ? 'text-blue-600 font-semibold' : 'text-slate-600 hover:text-blue-600'
           }`}
         >
           <UserCheck className="w-5 h-5" />

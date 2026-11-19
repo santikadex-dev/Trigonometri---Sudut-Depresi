@@ -142,7 +142,7 @@ export const WorksheetSection: React.FC<WorksheetSectionProps> = ({
     <section
       id="worksheet"
       aria-labelledby="worksheet-heading"
-      className="py-12 border-t border-slate-200"
+      className="py-12 border-t border-slate-200 scroll-mt-28"
     >
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
         <div className="space-y-2 max-w-2xl">
@@ -181,7 +181,10 @@ export const WorksheetSection: React.FC<WorksheetSectionProps> = ({
 
       <form onSubmit={handleSubmitClick} className="space-y-10">
         {/* Identitas Siswa */}
-        <div className="border border-slate-200 rounded-xl p-5 sm:p-6 bg-white space-y-4">
+        <div
+          id="identitas-siswa"
+          className="border border-slate-200 rounded-xl p-5 sm:p-6 bg-white space-y-4 scroll-mt-28"
+        >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-lg font-semibold text-slate-900">01. Identitas Detektif</h3>
             {user && (
@@ -249,7 +252,10 @@ export const WorksheetSection: React.FC<WorksheetSectionProps> = ({
         </div>
 
         {/* Bagian 1: Cek Konsep & Miskonsepsi */}
-        <div className="border border-slate-200 rounded-xl p-5 sm:p-6 bg-white space-y-6">
+        <div
+          id="cek-konsep"
+          className="border border-slate-200 rounded-xl p-5 sm:p-6 bg-white space-y-6 scroll-mt-28"
+        >
           <div className="space-y-1">
             <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">
               Tahap 1 · Cek Pemahaman Dasar
@@ -337,7 +343,7 @@ export const WorksheetSection: React.FC<WorksheetSectionProps> = ({
         </div>
 
         {/* Bagian 2: 3 Kasus Berdiferensiasi */}
-        <div className="space-y-6">
+        <div id="kasus-lapangan" className="space-y-6 scroll-mt-28">
           <div className="space-y-1">
             <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">
               Tahap 2 · Penyelidikan Berjenjang
@@ -736,7 +742,7 @@ export const WorksheetSection: React.FC<WorksheetSectionProps> = ({
         {/* Bagian 3: Evaluasi AKM / HOTS & Refleksi */}
         <div
           id="evaluasi"
-          className="border border-slate-200 rounded-xl p-5 sm:p-6 bg-white space-y-7"
+          className="border border-slate-200 rounded-xl p-5 sm:p-6 bg-white space-y-7 scroll-mt-28"
         >
           <div className="space-y-1">
             <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">

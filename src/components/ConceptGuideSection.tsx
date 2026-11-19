@@ -54,7 +54,7 @@ export const ConceptGuideSection: React.FC<ConceptGuideSectionProps> = ({
     <section
       id="konsep"
       aria-labelledby="konsep-heading"
-      className="py-12 border-t border-slate-200"
+      className="py-12 border-t border-slate-200 scroll-mt-28"
     >
       <div className="max-w-3xl space-y-3 mb-8">
         <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">
@@ -145,7 +145,10 @@ export const ConceptGuideSection: React.FC<ConceptGuideSectionProps> = ({
 
       {/* Interactive Example Walkthrough + Reference Table */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        <div className="lg:col-span-7 border border-slate-200 rounded-xl p-6 bg-white space-y-4">
+        <div
+          id="contoh-terbimbing"
+          className="lg:col-span-7 border border-slate-200 rounded-xl p-6 bg-white space-y-4 scroll-mt-28"
+        >
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">
@@ -212,7 +215,10 @@ export const ConceptGuideSection: React.FC<ConceptGuideSectionProps> = ({
         </div>
 
         <div className="lg:col-span-5 space-y-5">
-          <div className="border border-slate-200 rounded-xl p-6 bg-white space-y-4">
+          <div
+            id="kalkulator-tangen"
+            className="border border-slate-200 rounded-xl p-6 bg-white space-y-4 scroll-mt-28"
+          >
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-base font-semibold text-slate-900">Kalkulator Tangen</h3>
